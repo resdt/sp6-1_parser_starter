@@ -6,7 +6,10 @@ const CURRENCY_MAP = {
 
 function parsePage() {
   const headContainer = document.querySelector('head');
-  const pageTitle = headContainer.querySelector('title').textContent.trim();
+
+  const rawTitle = headContainer.querySelector('title').textContent.trim();
+  let [pageTitle, _] = rawTitle.split('—');
+  pageTitle = pageTitle.trim();
 
   let pageDescription = null;
   let keywords = null;
@@ -16,24 +19,21 @@ function parsePage() {
 
   const metaTags = headContainer.querySelectorAll('meta');
   for (const metaTag of metaTags) {
-    const content = metaTag.content;
+    const name = metaTag.getAttribute('name');
+    const property = metaTag.getAttribute('property');
+    const content = metaTag.getAttribute('content');
 
-    switch (metaTag.name) {
-      case 'description':
-        pageDescription = content;
-        break;
-      case 'keywords':
-        keywords = content.split(',');
-        break;
-      case 'og:title':
-        opengraphTitle = content;
-        break;
-      case 'og:image':
-        opengraphImage = content;
-        break;
-      case 'og:type':
-        opengraphType = content;
-        break;
+    if (name == 'description') {
+      pageDescription = content;
+    } else if (name == 'keywords') {
+      keywords = content.split(',').map(e => e.trim());
+    } else if (property == 'og:title') {
+      const [title, _] = content.split('—');
+      opengraphTitle = title.trim();
+    } else if (property == 'og:image') {
+      opengraphImage = content;
+    } else if (property == 'og:type') {
+      opengraphType = content;
     }
   }
 
@@ -92,16 +92,10 @@ function parsePage() {
     productProperties[key] = val;
   }
 
-  let productDescription = '';
-  const productDescriptionElements =
-    productContainer.querySelectorAll('.description h3, p');
-  for (const element of [...productDescriptionElements]) {
-    for (const attribute of element.attributes) {
-      element.removeAttribute(attribute.name);
-    }
-
-    productDescription += element.outerHTML;
-  }
+  const productDescriptionDom = productContainer.querySelector('.description');
+  const productDescriptionTitle = productDescriptionDom.querySelector('h3');
+  productDescriptionTitle.removeAttribute('class');
+  const productDescription = productDescriptionDom.innerHTML.trim();
 
   const productImages = [];
   const navButtonImages = productContainer.querySelectorAll(
@@ -126,7 +120,7 @@ function parsePage() {
     const image = item.querySelector('img').src;
 
     const rawPrice = item.querySelector('b').textContent.trim();
-    const price = parseInt(rawPrice.slice(1));
+    const price = rawPrice.slice(1);
 
     const currencySymbol = rawPrice[0];
     const currency = CURRENCY_MAP[currencySymbol];
